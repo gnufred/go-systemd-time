@@ -1,5 +1,9 @@
 # go-systemd-time
 
+This is a temporary for of the original repo https://github.com/trstringer/go-systemd-time/
+
+## Intro
+
 ![ci](https://github.com/trstringer/go-systemd-time/workflows/ci/badge.svg)
 
 _Go implementation of systemd time (`man systemd.time`)_
