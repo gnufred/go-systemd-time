@@ -1,6 +1,7 @@
 package systemdtime
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -55,7 +56,7 @@ func UnitToDuration(unit string) (time.Duration, error) {
 		return time.Duration(365.25 * float64(24) * float64(time.Hour)), nil
 	}
 
-	return 0, fmt.Errorf("Unit %s did not match", unit)
+	return 0, fmt.Errorf("unit %s did not match", unit)
 }
 
 // ParseDuration converts a systemd relative time string into time.Duration
@@ -68,6 +69,8 @@ func ParseDuration(raw string) (time.Duration, error) {
 	if !re.MatchString(raw) {
 		return 0, fmt.Errorf("ParseDuration: incorrect format for raw input %s", raw)
 	}
+
+	isAgo := strings.Contains(raw, "ago")
 
 	reNegative, err := regexp.Compile(`^\s*-.*`)
 	if err != nil {
@@ -94,7 +97,7 @@ func ParseDuration(raw string) (time.Duration, error) {
 		// if we run into a case where there aren't exactly two matches
 		// then that means this is an unexpected string and we should error out
 		if len(subGroupMatches) != 3 {
-			return 0, fmt.Errorf("Unexpected match count for '%s': expected 2 and got %d", matchTrimmed, len(subGroupMatches))
+			return 0, fmt.Errorf("unexpected match count for '%s': expected 2 and got %d", matchTrimmed, len(subGroupMatches))
 		}
 
 		subGroupMatchValue, err := strconv.Atoi(subGroupMatches[1])
@@ -114,7 +117,27 @@ func ParseDuration(raw string) (time.Duration, error) {
 		totalDuration *= -1
 	}
 
+	if isAgo {
+		totalDuration *= -1
+	}
+
 	return totalDuration, nil
+}
+
+func TranslateWords(raw string) (time.Time, error) {
+	switch raw {
+	case "now":
+		return time.Now(), nil
+	case "today":
+		return time.Now().Truncate(time.Hour * 24), nil
+	case "yesterday":
+		return time.Now().Add(time.Hour * -24).Truncate(time.Hour * 24), nil
+	case "tomorrow":
+		return time.Now().Add(time.Hour * 24).Truncate(time.Hour * 24), nil
+	default:
+		var t time.Time
+		return t, errors.New("no matching words")
+	}
 }
 
 // AdjustTime takes a systemd time adjustment string and uses it to modify a time.Time
